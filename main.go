@@ -27,51 +27,6 @@ func init() {
 	}
 }
 
-// func main() {
-// 	router := gin.Default()
-// 	router.POST("/webhook", func(c *gin.Context) {
-// 		var notification Notification
-// 		err := c.ShouldBind(&notification)
-// 		if err != nil {
-// 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-// 			return
-// 		}
-// 		c.JSON(http.StatusOK, gin.H{"message": " successful receive alert notification message!"})
-// 		fmt.Printf("alerts:%#v\n", notification.Alerts)
-// 		if notification.Status == "firing" {
-// 			for _, alert := range notification.Alerts {
-// 				fmt.Printf("alert:%v\n", alert)
-// 				if alert.Status == "firing" {
-// 					go HandleWebhook(alert)
-// 				}
-// 			}
-// 		}
-// 	})
-// 	router.Run(":8080")
-// }
-
-//	func HandleWebhook(alert Alert) {
-//		url := "http://localhost:9000/hooks/webhook"
-//		contentType := "application/json"
-//		data, err := json.Marshal(&alert)
-//		if err != nil {
-//			fmt.Println("json marshal error")
-//			return
-//		}
-//		resp, err := http.Post(url, contentType, strings.NewReader(string(data)))
-//		if err != nil {
-//			log.Fatal(err)
-//			return
-//		}
-//		defer resp.Body.Close()
-//		b, err := io.ReadAll(resp.Body)
-//		if err != nil {
-//			log.Fatal(err)
-//			return
-//		}
-//		fmt.Println(string(b))
-//	}
-
 func AlertMarshal(alert *Alert) string {
 	data, err := json.Marshal(&alert)
 	if err != nil {
@@ -134,12 +89,8 @@ func HandlerWebhook(c *gin.Context) {
 }
 
 func main() {
-	// 设置gin运行模式，可选：DebugMode、ReleaseMode、TestMode
-
 	gin.SetMode(gin.ReleaseMode)
-	// 关闭控制台日志颜色
 	gin.DisableConsoleColor()
-	// 记录到文件
 	f, _ := os.OpenFile("gin.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	gin.DefaultWriter = io.MultiWriter(f)
 
@@ -149,7 +100,6 @@ func main() {
 	})
 	r.POST("/alert/:webhook", HandlerWebhook)
 
-	// 设置程序优雅退出
 	srv := &http.Server{
 		Addr:    cfg.ListenAddress,
 		Handler: r,
