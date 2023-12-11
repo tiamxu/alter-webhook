@@ -15,7 +15,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
+
+var cfg *Config
+
+func init() {
+	loadConfig()
+	if err := cfg.InitConfig(); err != nil {
+		logrus.Fatalf("配置文件错误,%v\n", err)
+	}
+}
 
 // func main() {
 // 	router := gin.Default()
@@ -40,27 +50,27 @@ import (
 // 	router.Run(":8080")
 // }
 
-// func HandleWebhook(alert Alert) {
-// 	url := "http://localhost:9000/hooks/webhook"
-// 	contentType := "application/json"
-// 	data, err := json.Marshal(&alert)
-// 	if err != nil {
-// 		fmt.Println("json marshal error")
-// 		return
-// 	}
-// 	resp, err := http.Post(url, contentType, strings.NewReader(string(data)))
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		return
-// 	}
-// 	defer resp.Body.Close()
-// 	b, err := io.ReadAll(resp.Body)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 		return
-// 	}
-// 	fmt.Println(string(b))
-// }
+//	func HandleWebhook(alert Alert) {
+//		url := "http://localhost:9000/hooks/webhook"
+//		contentType := "application/json"
+//		data, err := json.Marshal(&alert)
+//		if err != nil {
+//			fmt.Println("json marshal error")
+//			return
+//		}
+//		resp, err := http.Post(url, contentType, strings.NewReader(string(data)))
+//		if err != nil {
+//			log.Fatal(err)
+//			return
+//		}
+//		defer resp.Body.Close()
+//		b, err := io.ReadAll(resp.Body)
+//		if err != nil {
+//			log.Fatal(err)
+//			return
+//		}
+//		fmt.Println(string(b))
+//	}
 
 func AlertMarshal(alert *Alert) string {
 	data, err := json.Marshal(&alert)
@@ -71,8 +81,8 @@ func AlertMarshal(alert *Alert) string {
 	return string(data)
 }
 
-func RequestWebHook(data string) {
-	url := "http://localhost:9000/hooks/webhook"
+func RequestWebHook(data, webhook string) {
+	url := fmt.Sprintf("%s/%s", "http://localhost:9000/hooks", webhook)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(data)))
 	if err != nil {
 		log.Fatal(err)
@@ -94,23 +104,33 @@ func RequestWebHook(data string) {
 
 func HandlerWebhook(c *gin.Context) {
 	var notification Notification
+	webhook := c.Param("webhook")
 	if err := c.ShouldBind(&notification); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),
 		})
 		return
 	}
-	if notification.Status == "firing" {
-		for _, alert := range notification.Alerts {
-			fmt.Printf("alert:%v\n", alert)
-			if alert.Status == "firing" {
-				RequestWebHook(AlertMarshal(&alert))
+	for _, hook := range cfg.Hooks {
+		fmt.Println("Hook:", hook)
+		if webhook == hook {
+			if notification.Status == "firing" {
+				for _, alert := range notification.Alerts {
+					fmt.Printf("alert:%v\n", alert)
+					if alert.Status == "firing" {
+						RequestWebHook(AlertMarshal(&alert), webhook)
+					}
+				}
 			}
+			c.JSON(http.StatusOK, gin.H{
+				"msg": "success",
+			})
+		} else {
+			fmt.Println("webhook is not define.")
 		}
+
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"msg": "success",
-	})
+
 }
 
 func main() {
@@ -124,15 +144,14 @@ func main() {
 	gin.DefaultWriter = io.MultiWriter(f)
 
 	r := gin.Default()
-
-	v1 := r.Group("/v1")
-	{
-		v1.POST("/webhook", HandlerWebhook)
-	}
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "pong"})
+	})
+	r.POST("/alert/:webhook", HandlerWebhook)
 
 	// 设置程序优雅退出
 	srv := &http.Server{
-		Addr:    "127.0.0.1:8080",
+		Addr:    cfg.ListenAddress,
 		Handler: r,
 	}
 

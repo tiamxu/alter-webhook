@@ -1,0 +1,8 @@
+env: dev
+log_level: info
+srv:
+  network: tcp
+  listen_address: :8800
+hooks:
+- "webhook"
+- "test2"
