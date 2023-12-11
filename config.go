@@ -14,8 +14,9 @@ type Config struct {
 	Hooks    []string `yaml:"hooks"`
 }
 type Srv struct {
-	Network       string `yaml:"network"`
-	ListenAddress string `yaml:"listen_address"`
+	Network        string `yaml:"network"`
+	ListenAddress  string `yaml:"listen_address"`
+	WebHookAddress string `yaml:"webhook_address"`
 }
 
 const configPath = "config/config.yaml"

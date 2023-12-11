@@ -82,7 +82,7 @@ func AlertMarshal(alert *Alert) string {
 }
 
 func RequestWebHook(data, webhook string) {
-	url := fmt.Sprintf("%s/%s", "http://localhost:9000/hooks", webhook)
+	url := fmt.Sprintf("%s/%s", cfg.Srv.WebHookAddress, webhook)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(data)))
 	if err != nil {
 		log.Fatal(err)

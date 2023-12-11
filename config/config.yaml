@@ -3,6 +3,7 @@ log_level: info
 srv:
   network: tcp
   listen_address: :8800
+  webhook_address: "http://localhost:9000/hooks"
 hooks:
 - "webhook"
 - "test2"
